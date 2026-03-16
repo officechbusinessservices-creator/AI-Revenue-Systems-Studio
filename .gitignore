@@ -1,0 +1,4 @@
+# Generated client workspaces (keep demo as reference)
+clients/*
+!clients/demo-client/
+!clients/demo-client/**
