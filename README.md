@@ -16,6 +16,52 @@ This repository is a **ready-to-run operating kit** for delivering the AI Revenu
 3. Follow `START-HERE.md` for pre-sales to post-launch execution
 4. Deliver and close out using your generated client workspace
 
+## Installation & Setup
+
+To set up this project locally, we recommend using `requirements.lock` for dependency installation. This file contains pre-verified version pins that avoid the pip backtracking and dependency resolution issues noted in `requirements.txt`.
+
+### Quick Start (Recommended)
+
+```bash
+# Clone the repository
+git clone https://github.com/officechbusinessservices-creator/AI-Revenue-Systems-Studio.git
+cd AI-Revenue-Systems-Studio
+
+# Install dependencies using locked versions
+pip install -r requirements.lock
+```
+
+### For Local Development (Slower)
+
+If you need to modify dependencies, install from `requirements.txt` instead:
+
+```bash
+pip install -r requirements.txt
+```
+
+> **Note:** Loose version constraints in `requirements.txt` may cause pip to spend 10+ minutes resolving the grpcio/grpcio-tools/googleapis-common-protos compatibility. Always prefer `requirements.lock` for production and CI/CD builds.
+
+### Build Prerequisites
+
+Some packages require C/C++ build tools:
+
+**On Linux:**
+```bash
+sudo apt-get update
+sudo apt-get install build-essential python3-dev libpq-dev
+```
+
+**On macOS:**
+```bash
+brew install python@3.11 postgresql
+```
+
+### Troubleshooting
+
+- **Build failures for grpcio, asyncpg, orjson, pydantic-core:** Install build essentials (see above)
+- **Long pip install times:** Use `requirements.lock` instead of `requirements.txt`
+- **Version conflicts:** Clear pip cache: `pip cache purge` then retry
+
 ## Core files
 
 - `AI-Revenue-Systems-Studio-Blueprint.md`
