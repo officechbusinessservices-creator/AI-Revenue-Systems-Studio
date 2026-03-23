@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CompliCore StayOps — Platform Demo</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #09090b; color: #f4f4f5; display: flex; height: 100vh; overflow: hidden; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #18181b; }
+    ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 2px; }
+
+    /* Sidebar */
+    aside { width: 216px; min-width: 216px; background: #111113; border-right: 1px solid #27272a; display: flex; flex-direction: column; height: 100vh; }
+    .logo { padding: 18px 20px 14px; border-bottom: 1px solid #1f1f23; }
+    .logo-mark { display: flex; align-items: center; gap: 8px; }
+    .logo-icon { width: 28px; height: 28px; background: linear-gradient(135deg, #7c3aed, #4f46e5); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; color: #fff; }
+    .logo-name { font-size: 14px; font-weight: 700; color: #e4e4e7; }
+    .logo-tag { font-size: 9px; color: #71717a; letter-spacing: .05em; margin-top: 1px; }
+    nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
+    .nav-section { font-size: 9px; font-weight: 700; color: #52525b; letter-spacing: .1em; text-transform: uppercase; padding: 10px 10px 6px; }
+    .nav-item { display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #a1a1aa; transition: all .15s; border: none; background: none; width: 100%; text-align: left; }
+    .nav-item:hover { background: #1c1c20; color: #e4e4e7; }
+    .nav-item.active { background: #1e1b2e; color: #a78bfa; }
+    .nav-item svg { flex-shrink: 0; width: 15px; height: 15px; }
+    .nav-badge { margin-left: auto; background: #78350f; color: #fbbf24; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 10px; }
+    .sidebar-footer { padding: 14px; border-top: 1px solid #1f1f23; }
+    .agent-live { display: flex; align-items: center; gap: 7px; font-size: 11px; color: #71717a; }
+    .pulse-dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.9)} }
+
+    /* Main area */
+    main { flex: 1; overflow-y: auto; display: flex; flex-direction: column; min-width: 0; }
+    .view { display: none; padding: 28px 32px; max-width: 1200px; width: 100%; animation: fadeIn .2s ease; }
+    .view.active { display: block; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+
+    /* Cards */
+    .card { background: #18181b; border: 1px solid #27272a; border-radius: 14px; padding: 18px; }
+    .card-sm { background: #18181b; border: 1px solid #27272a; border-radius: 12px; padding: 14px; }
+
+    /* Grids */
+    .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+    .grid-6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+    /* Section headers */
+    .section-label { font-size: 10px; font-weight: 700; color: #52525b; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 12px; }
+    .page-title { font-size: 20px; font-weight: 600; color: #f4f4f5; }
+    .page-subtitle { font-size: 13px; color: #71717a; margin-top: 3px; }
+
+    /* KPI card */
+    .kpi-label { font-size: 10px; color: #71717a; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 6px; }
+    .kpi-value { font-size: 22px; font-weight: 600; color: #f4f4f5; }
+    .kpi-sub { font-size: 11px; margin-top: 3px; }
+
+    /* Agent card */
+    .agent-card { border-radius: 12px; border-width: 1px; border-style: solid; padding: 12px; }
+    .agent-label { font-size: 10px; font-weight: 800; letter-spacing: .05em; }
+    .agent-workflow { font-size: 10px; background: rgba(0,0,0,.25); border-radius: 6px; padding: 3px 8px; margin: 6px 0; }
+    .agent-stats { display: flex; align-items: center; justify-content: space-between; font-size: 10px; }
+
+    /* Approval row */
+    .approval-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #18181b; border: 1px solid rgba(234,179,8,.15); border-radius: 12px; }
+    .appr-badge { font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 5px; border-width: 1px; border-style: solid; }
+    .appr-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .btn-approve { display: flex; align-items: center; gap: 4px; padding: 4px 10px; font-size: 11px; font-weight: 600; background: #16a34a; color: #fff; border: none; border-radius: 7px; cursor: pointer; transition: background .15s; }
+    .btn-approve:hover { background: #15803d; }
+    .btn-deny { display: flex; align-items: center; gap: 4px; padding: 4px 10px; font-size: 11px; font-weight: 600; background: none; color: #f87171; border: 1px solid #7f1d1d; border-radius: 7px; cursor: pointer; transition: background .15s; }
+    .btn-deny:hover { background: rgba(239,68,68,.1); }
+
+    /* Quick action button */
+    .quick-action { display: flex; align-items: center; gap: 10px; padding: 11px 12px; background: #18181b; border: 1px solid #27272a; border-radius: 12px; cursor: pointer; transition: all .15s; text-align: left; width: 100%; }
+    .quick-action:hover:not(.done) { border-color: #3f3f46; background: rgba(63,63,70,.35); }
+    .quick-action.done { opacity: .55; cursor: default; }
+    .qa-icon { width: 30px; height: 30px; background: #1c1c20; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .qa-label { font-size: 12px; font-weight: 600; color: #e4e4e7; }
+    .qa-desc { font-size: 10px; color: #52525b; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 2px; border-bottom: 1px solid #27272a; margin-bottom: 20px; }
+    .tab-btn { padding: 9px 16px; font-size: 13px; font-weight: 500; color: #71717a; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all .15s; display: flex; align-items: center; gap: 6px; margin-bottom: -1px; }
+    .tab-btn:hover { color: #e4e4e7; }
+    .tab-btn.active { color: #a78bfa; border-bottom-color: #7c3aed; }
+    .tab-badge { font-size: 9px; font-weight: 700; background: rgba(217,119,6,.2); color: #fbbf24; padding: 1px 5px; border-radius: 8px; }
+
+    /* History row */
+    .hist-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #111113; border-radius: 10px; cursor: pointer; transition: background .15s; }
+    .hist-row:hover { background: #1c1c20; }
+    .hist-details { background: #09090b; border-top: 1px solid #1f1f23; padding: 12px 16px; font-size: 11px; color: #71717a; display: none; }
+    .hist-details.open { display: block; }
+    .hist-row-wrap { border: 1px solid #27272a; border-radius: 10px; overflow: hidden; margin-bottom: 4px; }
+    .detail-row { display: flex; gap: 8px; margin-bottom: 4px; }
+    .detail-key { font-weight: 600; color: #52525b; width: 90px; flex-shrink: 0; }
+
+    /* Status badges */
+    .badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 6px; font-size: 10px; font-weight: 600; border-width: 1px; border-style: solid; }
+    .badge-green { background: rgba(22,163,74,.15); color: #4ade80; border-color: rgba(74,222,128,.2); }
+    .badge-red { background: rgba(220,38,38,.15); color: #f87171; border-color: rgba(248,113,113,.2); }
+    .badge-amber { background: rgba(217,119,6,.15); color: #fbbf24; border-color: rgba(251,191,36,.2); }
+    .badge-blue { background: rgba(37,99,235,.15); color: #60a5fa; border-color: rgba(96,165,250,.2); }
+    .badge-gray { background: rgba(63,63,70,.3); color: #a1a1aa; border-color: rgba(113,113,122,.3); }
+    .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .dot-green { background: #22c55e; animation: pulse 2s infinite; }
+    .dot-amber { background: #f59e0b; animation: pulse 2s infinite; }
+    .dot-red { background: #ef4444; }
+    .dot-gray { background: #4b5563; }
+
+    /* Sparkline area (simple bar chart wrapper) */
+    .chart-wrap { background: #111113; border-radius: 10px; padding: 16px; }
+
+    /* Listing row */
+    .listing-row { display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: #18181b; border: 1px solid #27272a; border-radius: 13px; margin-bottom: 10px; transition: border-color .15s; }
+    .listing-row:hover { border-color: #3f3f46; }
+    .listing-img { width: 58px; height: 58px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .occ-bar-wrap { width: 100px; flex-shrink: 0; }
+    .occ-track { height: 5px; background: #27272a; border-radius: 3px; overflow: hidden; margin-top: 4px; }
+    .occ-fill { height: 100%; border-radius: 3px; }
+
+    /* Progress bar */
+    .prog-track { height: 5px; background: #27272a; border-radius: 3px; overflow: hidden; margin-top: 4px; }
+    .prog-fill { height: 100%; border-radius: 3px; }
+
+    /* Billing plan card */
+    .plan-card { background: #18181b; border: 1px solid #27272a; border-radius: 14px; padding: 20px; position: relative; }
+    .plan-card.featured { border-color: rgba(52,211,153,.3); background: rgba(52,211,153,.04); }
+    .plan-popular { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #10b981; color: #18181b; font-size: 9px; font-weight: 800; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+    .plan-current { position: absolute; top: -10px; right: 14px; background: #3f3f46; color: #d4d4d8; font-size: 9px; font-weight: 700; padding: 3px 8px; border-radius: 20px; }
+    .plan-name { font-size: 11px; font-weight: 700; color: #a1a1aa; }
+    .plan-price { font-size: 26px; font-weight: 800; color: #f4f4f5; }
+    .plan-unit { font-size: 11px; font-weight: 400; color: #52525b; }
+    .plan-desc { font-size: 11px; color: #52525b; margin: 4px 0 14px; }
+    .plan-feature { display: flex; align-items: flex-start; gap: 7px; font-size: 11px; color: #a1a1aa; margin-bottom: 7px; }
+    .plan-btn { width: 100%; padding: 8px; border-radius: 9px; font-size: 12px; font-weight: 600; border: none; cursor: pointer; transition: all .15s; margin-top: 14px; }
+    .plan-btn-primary { background: #10b981; color: #111; }
+    .plan-btn-primary:hover { background: #34d399; }
+    .plan-btn-default { background: #27272a; color: #d4d4d8; }
+    .plan-btn-default:hover { background: #3f3f46; }
+    .plan-btn-current { background: #1c1c20; color: #52525b; cursor: default; }
+
+    /* Audit trail */
+    .audit-entry { background: #111113; border: 1px solid #1f1f23; border-radius: 10px; padding: 12px 14px; margin-bottom: 6px; font-size: 11px; font-family: 'SF Mono', 'Fira Code', monospace; }
+    .audit-ts { color: #52525b; }
+    .audit-action { color: #818cf8; font-weight: 700; }
+    .audit-agent { color: #a78bfa; }
+    .audit-pass { color: #4ade80; }
+    .audit-field { color: #71717a; }
+    .audit-value { color: #a1a1aa; }
+
+    /* Trigger modal */
+    .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.6); backdrop-filter: blur(4px); display: none; z-index: 100; align-items: center; justify-content: center; }
+    .modal-bg.open { display: flex; }
+    .modal-box { background: #1c1c20; border: 1px solid #3f3f46; border-radius: 16px; width: 440px; max-width: 90vw; overflow: hidden; }
+    .modal-head { padding: 16px 18px; border-bottom: 1px solid #27272a; }
+    .modal-title { font-size: 14px; font-weight: 600; }
+    .modal-sub { font-size: 11px; color: #71717a; margin-top: 3px; }
+    .modal-search { padding: 10px 14px; border-bottom: 1px solid #27272a; }
+    .modal-search input { width: 100%; background: #111113; border: 1px solid #27272a; border-radius: 8px; padding: 7px 11px; font-size: 13px; color: #e4e4e7; outline: none; }
+    .modal-search input:focus { border-color: #7c3aed; }
+    .modal-list { max-height: 220px; overflow-y: auto; padding: 8px; }
+    .modal-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; cursor: pointer; transition: background .1s; }
+    .modal-item:hover { background: #27272a; }
+    .modal-item.selected { background: rgba(124,58,237,.15); }
+    .modal-footer { padding: 12px 14px; border-top: 1px solid #27272a; display: flex; justify-content: flex-end; gap: 8px; }
+    .btn-cancel { padding: 7px 14px; font-size: 13px; background: none; border: none; color: #71717a; cursor: pointer; border-radius: 8px; }
+    .btn-cancel:hover { background: #27272a; color: #e4e4e7; }
+    .btn-run { padding: 7px 18px; font-size: 13px; font-weight: 600; background: #7c3aed; color: #fff; border: none; border-radius: 8px; cursor: pointer; transition: background .15s; }
+    .btn-run:hover { background: #6d28d9; }
+    .btn-run:disabled { opacity: .4; cursor: default; }
+
+    /* Refresh btn */
+    .btn-ghost { display: flex; align-items: center; gap: 6px; padding: 7px 12px; font-size: 13px; color: #71717a; background: none; border: 1px solid #27272a; border-radius: 9px; cursor: pointer; transition: all .15s; }
+    .btn-ghost:hover { background: #1c1c20; color: #e4e4e7; }
+    .btn-primary { display: flex; align-items: center; gap: 6px; padding: 7px 14px; font-size: 13px; font-weight: 600; background: #7c3aed; color: #fff; border: none; border-radius: 9px; cursor: pointer; transition: background .15s; }
+    .btn-primary:hover { background: #6d28d9; }
+
+    /* Period selector */
+    .period-sel { display: flex; gap: 2px; background: #18181b; border: 1px solid #27272a; border-radius: 9px; padding: 3px; }
+    .period-btn { padding: 4px 12px; font-size: 11px; font-weight: 600; color: #71717a; background: none; border: none; border-radius: 6px; cursor: pointer; transition: all .15s; }
+    .period-btn.active { background: #3f3f46; color: #f4f4f5; }
+
+    /* Search input */
+    .search-wrap { position: relative; margin-bottom: 14px; }
+    .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #52525b; pointer-events: none; }
+    .search-input { width: 100%; background: #18181b; border: 1px solid #27272a; border-radius: 12px; padding: 9px 14px 9px 36px; font-size: 13px; color: #e4e4e7; outline: none; transition: border-color .15s; }
+    .search-input:focus { border-color: #3f3f46; }
+    .search-input::placeholder { color: #52525b; }
+
+    /* Toast */
+    .toast { position: fixed; bottom: 24px; right: 24px; background: #1c1c20; border: 1px solid #3f3f46; border-radius: 10px; padding: 10px 16px; font-size: 13px; color: #e4e4e7; display: none; z-index: 200; animation: slideUp .2s ease; }
+    .toast.show { display: flex; align-items: center; gap: 8px; }
+    @keyframes slideUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  </style>
+</head>
+<body>
+
+<!-- ────────────────────────── SIDEBAR ────────────────────────── -->
+<aside>
+  <div class="logo">
+    <div class="logo-mark">
+      <div class="logo-icon">CC</div>
+      <div>
+        <div class="logo-name">CompliCore</div>
+        <div class="logo-tag">STAYOPS v2.0</div>
+      </div>
+    </div>
+  </div>
+  <nav>
+    <div class="nav-section">Platform</div>
+    <button class="nav-item active" onclick="showView('dashboard', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </button>
+    <button class="nav-item" onclick="showView('agents', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      Agent Control
+      <span class="nav-badge" id="sidebar-appr-badge">2</span>
+    </button>
+    <button class="nav-item" onclick="showView('analytics', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Analytics
+    </button>
+    <div class="nav-section" style="margin-top:8px">StayOps</div>
+    <button class="nav-item" onclick="showView('listings', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Listings
+    </button>
+    <button class="nav-item" onclick="showView('billing', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+      Billing
+    </button>
+    <div class="nav-section" style="margin-top:8px">Ops</div>
+    <button class="nav-item" onclick="showView('audit', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Audit Trail
+    </button>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="agent-live">
+      <div class="pulse-dot"></div>
+      <span>2 agents running</span>
+    </div>
+    <div style="font-size:10px;color:#3f3f46;margin-top:6px">46 skills · 28 workflows</div>
+  </div>
+</aside>
+
+<!-- ────────────────────────── MAIN CONTENT ────────────────────────── -->
+<main>
+
+  <!-- ═══════════ DASHBOARD ═══════════ -->
+  <div id="view-dashboard" class="view active">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px">
+      <div>
+        <div class="page-title">Dashboard</div>
+        <div class="page-subtitle" id="dash-subtitle"><span style="color:#4ade80">2 agents running</span> · Today: 23 workflows completed</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-ghost" onclick="refreshDash()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+          Refresh
+        </button>
+        <button class="btn-ghost" onclick="showView('agents', document.querySelector('.nav-item:nth-child(4)'))">Agent Control →</button>
+      </div>
+    </div>
+
+    <!-- Revenue strip -->
+    <div class="section-label">Revenue Intelligence</div>
+    <div class="grid-5" style="margin-bottom:24px">
+      <div class="card-sm">
+        <div class="kpi-label">MRR</div>
+        <div class="kpi-value">$18,240</div>
+        <div class="kpi-sub" style="color:#4ade80">+$320 this week</div>
+      </div>
+      <div class="card-sm">
+        <div class="kpi-label">Pipeline Velocity</div>
+        <div class="kpi-value">$14.2<span style="font-size:13px;color:#71717a">/day</span></div>
+        <div class="kpi-sub" style="color:#71717a">deals × rate × value</div>
+      </div>
+      <div class="card-sm">
+        <div class="kpi-label">Churn Rate</div>
+        <div class="kpi-value">2.4%</div>
+        <div class="kpi-sub" style="color:#4ade80">Healthy</div>
+      </div>
+      <div class="card-sm">
+        <div class="kpi-label">Active Properties</div>
+        <div class="kpi-value">47</div>
+        <div class="kpi-sub" style="color:#71717a">across all plans</div>
+      </div>
+      <div class="card-sm" style="border-color:rgba(234,179,8,.25)">
+        <div class="kpi-label">Approvals Pending</div>
+        <div class="kpi-value" id="dash-appr-count">2</div>
+        <div class="kpi-sub" style="color:#fbbf24">require sign-off</div>
+      </div>
+    </div>
+
+    <!-- Agent team -->
+    <div class="section-label">Agent Team</div>
+    <div class="grid-6" style="margin-bottom:24px" id="dash-agent-grid">
+      <!-- Populated by JS -->
+    </div>
+
+    <!-- Two-column -->
+    <div class="grid-2">
+      <!-- Approvals -->
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="section-label" style="margin-bottom:0">Approvals</div>
+            <span id="dash-appr-badge" style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;font-size:9px;font-weight:700;background:rgba(234,179,8,.15);color:#fbbf24;border-radius:50%">2</span>
+          </div>
+          <button style="font-size:11px;color:#52525b;background:none;border:none;cursor:pointer" onclick="showView('agents', null)">View all</button>
+        </div>
+        <div id="dash-approvals"><!-- Populated by JS --></div>
+      </div>
+
+      <!-- Quick actions -->
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div class="section-label" style="margin-bottom:0">Quick Actions</div>
+          <button style="font-size:11px;color:#52525b;background:none;border:none;cursor:pointer" onclick="openTriggerModal()">▷ Full panel</button>
+        </div>
+        <div class="grid-2" id="dash-quick-actions"><!-- Populated by JS --></div>
+      </div>
+    </div>
+
+    <div style="margin-top:24px;padding-top:16px;border-top:1px solid #1f1f23;display:flex;justify-content:space-between;font-size:10px;color:#3f3f46">
+      <span>CompliCore v2.0 · 46 skills · 28 scheduled workflows</span>
+      <span id="dash-refresh-ts">Refreshed just now</span>
+    </div>
+  </div>
+
+  <!-- ═══════════ AGENT CONTROL ═══════════ -->
+  <div id="view-agents" class="view">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px">
+      <div>
+        <div class="page-title">Agent Control Panel</div>
+        <div class="page-subtitle"><span style="color:#4ade80">2 agents running</span> · refreshed just now</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-ghost" onclick="refreshAgents()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+          Refresh
+        </button>
+        <button class="btn-primary" onclick="openTriggerModal()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Trigger workflow
+        </button>
+      </div>
+    </div>
+
+    <!-- Metrics strip -->
+    <div class="grid-4" style="margin-bottom:24px">
+      <div class="card-sm">
+        <div class="kpi-label">Completed today</div>
+        <div class="kpi-value" style="color:#4ade80">8</div>
+      </div>
+      <div class="card-sm">
+        <div class="kpi-label">Failed today</div>
+        <div class="kpi-value" id="ag-fails" style="color:#f4f4f5">1</div>
+      </div>
+      <div class="card-sm" style="border-color:rgba(234,179,8,.2)">
+        <div class="kpi-label">Awaiting approval</div>
+        <div class="kpi-value" id="ag-appr" style="color:#fbbf24">2</div>
+      </div>
+      <div class="card-sm">
+        <div class="kpi-label">Policy blocks today</div>
+        <div class="kpi-value">2</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchAgentTab('overview', this)">Agents</button>
+      <button class="tab-btn" onclick="switchAgentTab('queue', this)">Queue <span class="tab-badge">2</span></button>
+      <button class="tab-btn" onclick="switchAgentTab('approvals', this)">Approvals <span class="tab-badge" id="ag-tab-appr-badge">2</span></button>
+      <button class="tab-btn" onclick="switchAgentTab('history', this)">History</button>
+    </div>
+
+    <!-- Agents tab -->
+    <div id="ag-tab-overview">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px" id="ag-agent-cards">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- Queue tab -->
+    <div id="ag-tab-queue" style="display:none">
+      <div style="space-y:6px">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#111113;border:1px solid #27272a;border-radius:10px;margin-bottom:6px">
+          <span class="dot dot-green"></span>
+          <span class="badge badge-amber" style="font-size:9px">COO</span>
+          <span style="flex:1;font-size:13px;color:#e4e4e7">Support inbox zero</span>
+          <span class="badge badge-blue">Running</span>
+          <span style="font-size:11px;color:#52525b">18m ago</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#111113;border:1px solid #27272a;border-radius:10px">
+          <span class="dot dot-green"></span>
+          <span class="badge badge-blue" style="font-size:9px">CTO</span>
+          <span style="flex:1;font-size:13px;color:#e4e4e7">Uptime error check</span>
+          <span class="badge badge-blue">Running</span>
+          <span style="font-size:11px;color:#52525b">3m ago</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Approvals tab -->
+    <div id="ag-tab-approvals" style="display:none" id="ag-approvals-list">
+      <div id="ag-approvals-content"><!-- Populated by JS --></div>
+    </div>
+
+    <!-- History tab -->
+    <div id="ag-tab-history" style="display:none">
+      <div id="ag-history-list"><!-- Populated by JS --></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ ANALYTICS ═══════════ -->
+  <div id="view-analytics" class="view">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px">
+      <div>
+        <div class="page-title">Analytics</div>
+        <div class="page-subtitle">Platform performance and revenue intelligence</div>
+      </div>
+      <div class="period-sel">
+        <button class="period-btn" onclick="setPeriod('7d',this)">7d</button>
+        <button class="period-btn active" onclick="setPeriod('30d',this)">30d</button>
+        <button class="period-btn" onclick="setPeriod('90d',this)">90d</button>
+      </div>
+    </div>
+
+    <!-- KPI strip -->
+    <div class="grid-4" style="margin-bottom:24px">
+      <div class="card-sm">
+        <div class="kpi-label">Current MRR</div>
+        <div class="kpi-value">$18,240</div>
+        <div class="kpi-sub" style="color:#4ade80">+$640/wk</div>
+      </div>
+      <div class="card-sm">
+        <div class="kpi-label">Agent Runs</div>
+        <div class="kpi-value">161</div>
+        <div class="kpi-sub" style="color:#71717a">this period</div>
+      </div>
+      <div class="card-sm">
+        <div class="kpi-label">Success Rate</div>
+        <div class="kpi-value">99.4%</div>
+        <div class="kpi-sub" style="color:#4ade80">1 failure</div>
+      </div>
+      <div class="card-sm">
+        <div class="kpi-label">Workflows Live</div>
+        <div class="kpi-value">28</div>
+        <div class="kpi-sub" style="color:#71717a">on schedule</div>
+      </div>
+    </div>
+
+    <!-- MRR chart -->
+    <div class="card" style="margin-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div>
+          <div style="font-size:13px;font-weight:600">MRR Trend</div>
+          <div style="font-size:11px;color:#52525b">6-week rolling</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;color:#4ade80;font-size:12px;font-weight:600">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          +28% 6wk
+        </div>
+      </div>
+      <canvas id="mrr-chart" height="100"></canvas>
+    </div>
+
+    <!-- Agent performance + Workflow history -->
+    <div class="grid-2">
+      <div class="card">
+        <div style="font-size:13px;font-weight:600;margin-bottom:16px">Agent Performance</div>
+        <div id="agent-perf-bars"><!-- Populated by JS --></div>
+      </div>
+      <div class="card">
+        <div style="font-size:13px;font-weight:600;margin-bottom:14px">Recent Workflows</div>
+        <div id="workflow-history"><!-- Populated by JS --></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ LISTINGS ═══════════ -->
+  <div id="view-listings" class="view">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px">
+      <div>
+        <div class="page-title">Listings</div>
+        <div class="page-subtitle">5 properties · 74% avg occupancy</div>
+      </div>
+      <button class="btn-primary" onclick="showToast('✓ Add listing form opening...')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add listing
+      </button>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid-3" style="margin-bottom:20px">
+      <div class="card-sm">
+        <div class="kpi-label">30-day revenue</div>
+        <div class="kpi-value">$58,430</div>
+        <div class="kpi-sub" style="color:#4ade80">+12% vs last month</div>
+      </div>
+      <div class="card-sm">
+        <div class="kpi-label">Avg occupancy</div>
+        <div class="kpi-value">74%</div>
+        <div class="kpi-sub" style="color:#71717a">active properties</div>
+      </div>
+      <div class="card-sm">
+        <div class="kpi-label">AI pricing</div>
+        <div class="kpi-value">3/5</div>
+        <div class="kpi-sub" style="color:#34d399">avg +9% revenue lift</div>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="search-wrap">
+      <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input class="search-input" type="text" placeholder="Search properties..." oninput="filterListings(this.value)" />
+    </div>
+
+    <!-- Listings -->
+    <div id="listings-list"><!-- Populated by JS --></div>
+  </div>
+
+  <!-- ═══════════ BILLING ═══════════ -->
+  <div id="view-billing" class="view">
+    <div style="margin-bottom:24px">
+      <div class="page-title">Billing</div>
+      <div class="page-subtitle">Current plan and upgrade options</div>
+    </div>
+
+    <!-- Current plan -->
+    <div class="card" style="margin-bottom:28px;border-color:rgba(52,211,153,.2)">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:42px;height:42px;background:rgba(52,211,153,.12);border-radius:11px;display:flex;align-items:center;justify-content:center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+          <div>
+            <div style="font-size:14px;font-weight:600">Host Club + AI</div>
+            <div style="font-size:12px;color:#71717a">$46/property/mo · 3 properties · $138/mo</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:11px;color:#34d399;background:rgba(52,211,153,.1);padding:3px 10px;border-radius:6px;border:1px solid rgba(52,211,153,.2)">Active</span>
+          <button style="font-size:12px;color:#71717a;background:none;border:none;cursor:pointer" onclick="showToast('Opening Stripe billing portal...')">Manage ↗</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Plan grid -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+      <div class="plan-card">
+        <div class="plan-name">Host Club</div>
+        <div class="plan-price">$18<span class="plan-unit">/property/mo</span></div>
+        <div class="plan-desc">For hosts with up to 10 properties</div>
+        <div class="plan-feature"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Listing management</div>
+        <div class="plan-feature"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Booking engine</div>
+        <div class="plan-feature"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Guest messaging</div>
+        <div class="plan-feature"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>OTA channel sync</div>
+        <div class="plan-feature"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Review system</div>
+        <button class="plan-btn plan-btn-default" onclick="showToast('Redirecting to checkout...')">Get started</button>
+      </div>
+      <div class="plan-card featured">
+        <div class="plan-popular">MOST POPULAR</div>
+        <div class="plan-current">CURRENT</div>
+        <div class="plan-name" style="color:#71717a">Host Club + AI</div>
+        <div class="plan-price">$46<span class="plan-unit">/property/mo</span></div>
+        <div class="plan-desc">AI-powered pricing and guest risk scoring</div>
+        <div class="plan-feature"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Everything in Host Club</div>
+        <div class="plan-feature"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Dynamic pricing AI</div>
+        <div class="plan-feature"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Guest risk scoring</div>
+        <div class="plan-feature"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Demand forecasting</div>
+        <div class="plan-feature"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Smart messaging AI</div>
+        <button class="plan-btn plan-btn-current">Current plan</button>
+      </div>
+      <div class="plan-card">
+        <div class="plan-name">Portfolio Pro</div>
+        <div class="plan-price">$399<span class="plan-unit">/mo flat</span></div>
+        <div class="plan-desc">Flat rate for up to 15 properties</div>
+        <div class="plan-feature"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Everything in AI tier</div>
+        <div class="plan-feature"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Multi-property analytics</div>
+        <div class="plan-feature"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Owner reporting</div>
+        <div class="plan-feature"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Revenue split tools</div>
+        <div class="plan-feature"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>API access</div>
+        <button class="plan-btn plan-btn-default" onclick="showToast('Redirecting to checkout...')">Get started</button>
+      </div>
+      <div class="plan-card">
+        <div class="plan-name">Enterprise</div>
+        <div class="plan-price">$888<span class="plan-unit">/mo</span></div>
+        <div class="plan-desc">Best for 25+ properties with white-label</div>
+        <div class="plan-feature"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Everything in Portfolio</div>
+        <div class="plan-feature"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Multi-entity operations</div>
+        <div class="plan-feature"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Custom AI models</div>
+        <div class="plan-feature"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>SLA + dedicated support</div>
+        <div class="plan-feature"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>White-label option</div>
+        <button class="plan-btn plan-btn-default" onclick="showToast('Connecting to sales team...')">Contact sales</button>
+      </div>
+    </div>
+    <div style="text-align:center;font-size:11px;color:#3f3f46;margin-top:18px">No revenue share. No setup fees. Cancel anytime. Questions? <a href="mailto:support@complicore.live" style="color:#71717a">support@complicore.live</a></div>
+  </div>
+
+  <!-- ═══════════ AUDIT TRAIL ═══════════ -->
+  <div id="view-audit" class="view">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px">
+      <div>
+        <div class="page-title">Audit Trail</div>
+        <div class="page-subtitle">Structured decision log · Every agent action · ReAct pattern</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#52525b">
+          <span class="dot dot-green" style="width:6px;height:6px;flex-shrink:0"></span> Live
+        </div>
+        <button class="btn-ghost" onclick="clearAudit()">Clear</button>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:12px 16px;border-bottom:1px solid #1f1f23;display:flex;align-items:center;gap:8px;font-size:11px;color:#52525b">
+        <span>FORMAT:</span>
+        <code style="color:#818cf8;font-size:10px">[TIMESTAMP] ACTION | AGENT | INPUT → OUTPUT | GUARDRAILS | HUMAN_APPROVAL</code>
+      </div>
+      <div id="audit-log" style="padding:12px;max-height:620px;overflow-y:auto;display:flex;flex-direction:column;gap:5px">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ═══════════ TRIGGER MODAL ═══════════ -->
+<div class="modal-bg" id="trigger-modal" onclick="closeTriggerModal(event)">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-title">Trigger workflow manually</div>
+      <div class="modal-sub">Runs immediately via orchestrator, bypassing scheduler cadence.</div>
+    </div>
+    <div class="modal-search">
+      <input type="text" placeholder="Filter workflows..." oninput="filterWorkflows(this.value)" id="modal-search-input" />
+    </div>
+    <div class="modal-list" id="modal-workflow-list"><!-- Populated by JS --></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeTriggerModal()">Cancel</button>
+      <button class="btn-run" id="modal-run-btn" disabled onclick="runSelectedWorkflow()">Run now</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ TOAST ═══════════ -->
+<div class="toast" id="toast">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+  <span id="toast-msg">Done</span>
+</div>
+
+<script>
+// ── DATA ────────────────────────────────────────────────────────────────────
+
+const AGENTS = [
+  { role: 'coo', label: 'COO', status: 'running', workflow: 'support_inbox_zero', done: 3, fail: 0, lastRun: -18, color: '#f59e0b', bg: 'rgba(245,158,11,.1)', border: 'rgba(245,158,11,.25)' },
+  { role: 'cfo', label: 'CFO', status: 'idle',    workflow: null,                 done: 5, fail: 0, lastRun: -120, color: '#34d399', bg: 'rgba(52,211,153,.1)', border: 'rgba(52,211,153,.2)' },
+  { role: 'cmo', label: 'CMO', status: 'idle',    workflow: null,                 done: 2, fail: 0, lastRun: -240, color: '#f472b6', bg: 'rgba(244,114,182,.1)', border: 'rgba(244,114,182,.2)' },
+  { role: 'cto', label: 'CTO', status: 'running', workflow: 'uptime_error_check', done: 5, fail: 1, lastRun: -3,   color: '#60a5fa', bg: 'rgba(96,165,250,.1)', border: 'rgba(96,165,250,.2)' },
+  { role: 'cro', label: 'CRO', status: 'idle',    workflow: null,                 done: 1, fail: 0, lastRun: -360, color: '#f87171', bg: 'rgba(248,113,113,.1)', border: 'rgba(248,113,113,.2)' },
+  { role: 'ceo', label: 'CEO', status: 'idle',    workflow: null,                 done: 1, fail: 0, lastRun: -480, color: '#a78bfa', bg: 'rgba(167,139,250,.1)', border: 'rgba(167,139,250,.2)' },
+];
+
+const WORKFLOW_LABELS = {
+  client_onboarding:       'Client onboarding',
+  support_inbox_zero:      'Support inbox zero',
+  weekly_business_review:  'Weekly review',
+  client_checkin:          'Client check-in',
+  feedback_collector:      'Feedback collector',
+  invoice_chaser:          'Invoice chaser',
+  mrr_dashboard:           'MRR dashboard',
+  runway_calculator:       'Runway calculator',
+  saas_subscription_audit: 'SaaS audit',
+  expense_organizer:       'Expense organizer',
+  social_content_pipeline: 'Social content',
+  competitor_watch:        'Competitor watch',
+  lead_followup:           'Lead follow-up',
+  newsletter_draft:        'Newsletter draft',
+  blog_to_social:          'Blog → social',
+  brand_mention_tracker:   'Brand mentions',
+  changelog_generator:     'Changelog',
+  bug_report_to_issue:     'Bug → issue',
+  weekly_ship_report:      'Ship report',
+  uptime_error_check:      'Uptime check',
+  build_in_public_update:  'Build in public',
+  pipeline_velocity:       'Pipeline velocity',
+  weekly_brief:            'CEO weekly brief',
+  sdd_architect:           'SDD architect',
+  content_calendar_architect: 'Content calendar',
+  devil_advocate_test:     'Devil advocate',
+  local_seo_manager:       'Local SEO audit',
+};
+
+const TRIGGERABLE_WORKFLOWS = [
+  { role: 'coo', workflow: 'client_onboarding' },
+  { role: 'coo', workflow: 'support_inbox_zero' },
+  { role: 'coo', workflow: 'weekly_business_review' },
+  { role: 'coo', workflow: 'feedback_collector' },
+  { role: 'cfo', workflow: 'invoice_chaser' },
+  { role: 'cfo', workflow: 'mrr_dashboard' },
+  { role: 'cfo', workflow: 'runway_calculator' },
+  { role: 'cfo', workflow: 'saas_subscription_audit' },
+  { role: 'cfo', workflow: 'expense_organizer' },
+  { role: 'cmo', workflow: 'social_content_pipeline' },
+  { role: 'cmo', workflow: 'competitor_watch' },
+  { role: 'cmo', workflow: 'newsletter_draft' },
+  { role: 'cto', workflow: 'changelog_generator' },
+  { role: 'cto', workflow: 'bug_report_to_issue' },
+  { role: 'cto', workflow: 'weekly_ship_report' },
+  { role: 'cto', workflow: 'uptime_error_check' },
+  { role: 'cro', workflow: 'pipeline_velocity' },
+  { role: 'ceo', workflow: 'weekly_brief' },
+];
+
+const APPROVALS = [
+  { id: 'appr_001', role: 'coo', label: 'COO', workflow: 'client_onboarding', action: 'gmail_draft_send', summary: 'Welcome email to host@beachvilla.com (Host Club AI)', age: '28m ago', payload: { to: 'host@beachvilla.com', subject: 'Welcome to CompliCore', template: 'welcome_host_club_ai' }, color: '#f59e0b', bg: 'rgba(245,158,11,.1)', border: 'rgba(245,158,11,.2)' },
+  { id: 'appr_002', role: 'cfo', label: 'CFO', workflow: 'invoice_chaser', action: 'gmail_draft_send', summary: '4 invoice reminders · $1,752 outstanding · oldest 12 days', age: '3h ago', payload: { emails: '4 drafts', total_outstanding: '$1,752', oldest_bucket: '8-14 days' }, color: '#34d399', bg: 'rgba(52,211,153,.1)', border: 'rgba(52,211,153,.2)' },
+];
+let approvalStates = {};
+
+const QUICK_ACTIONS = [
+  { id: 'qa1', label: 'MRR Dashboard',   desc: 'Revenue decomposition', role: 'cfo', color: '#34d399', icon: '📊' },
+  { id: 'qa2', label: 'Invoice Chaser',  desc: 'Chase overdue invoices', role: 'cfo', color: '#fbbf24', icon: '💸' },
+  { id: 'qa3', label: 'Content Calendar',desc: '30-day CMO calendar', role: 'cmo', color: '#f472b6', icon: '📅' },
+  { id: 'qa4', label: 'Pipeline Brief',  desc: 'Revenue velocity', role: 'cro', color: '#f87171', icon: '📈' },
+  { id: 'qa5', label: 'Uptime Check',    desc: 'Production health', role: 'cto', color: '#60a5fa', icon: '🔍' },
+  { id: 'qa6', label: 'CEO Brief',       desc: 'Weekly synthesis', role: 'ceo', color: '#a78bfa', icon: '📋' },
+  { id: 'qa7', label: 'Local SEO Audit', desc: 'GBP gap analysis', role: 'coo', color: '#fbbf24', icon: '📍' },
+  { id: 'qa8', label: 'SDD Architect',   desc: 'Spec → Plan → Tasks', role: 'cto', color: '#22d3ee', icon: '🏗️' },
+];
+let triggeredQA = new Set();
+
+const HISTORY = [
+  { id: 't001', role: 'coo', label: 'COO', workflow: 'support_inbox_zero',  status: 'running',           started: '-18m', result: null,                                              error: null },
+  { id: 't002', role: 'cto', label: 'CTO', workflow: 'uptime_error_check',  status: 'running',           started: '-3m',  result: null,                                              error: null },
+  { id: 't003', role: 'cfo', label: 'CFO', workflow: 'mrr_dashboard',       status: 'completed',         started: '-2h',  result: 'MRR $18,240 · net +$320 · 0 alerts',             error: null },
+  { id: 't004', role: 'coo', label: 'COO', workflow: 'client_onboarding',   status: 'awaiting_approval', started: '-25m', result: 'Welcome email draft ready',                        error: null },
+  { id: 't005', role: 'cmo', label: 'CMO', workflow: 'social_content_pipeline', status: 'completed',     started: '-4h',  result: '3 posts queued for approval',                     error: null },
+  { id: 't006', role: 'cto', label: 'CTO', workflow: 'bug_report_to_issue', status: 'failed',            started: '-5h',  result: null,                                              error: 'GITHUB_TOKEN not set — set env var and retry' },
+  { id: 't007', role: 'cfo', label: 'CFO', workflow: 'invoice_chaser',      status: 'awaiting_approval', started: '-3h',  result: '4 overdue invoices · $1,752 outstanding',         error: null },
+  { id: 't008', role: 'cfo', label: 'CFO', workflow: 'expense_organizer',   status: 'completed',         started: '-6h',  result: '34 receipts · $4,218 · 0 unmatched',             error: null },
+  { id: 't009', role: 'cro', label: 'CRO', workflow: 'pipeline_velocity',   status: 'completed',         started: '-6h',  result: 'Velocity $14.2/day · 3 at-risk deals',            error: null },
+  { id: 't010', role: 'ceo', label: 'CEO', workflow: 'weekly_brief',        status: 'completed',         started: '-8h',  result: '3 decision-forcing signals · all agents healthy', error: null },
+];
+let expandedHistItem = null;
+
+const LISTINGS_DATA = [
+  { id: 'l1', name: 'Ocean View Villa',  loc: 'Malibu, CA',          type: 'Villa',     bd: 4, ba: 3, rate: 450, aiRate: 520, occ: 87, rating: 4.9, reviews: 142, status: 'active',      ai: true,  grad: 'linear-gradient(135deg,#1e3a5f,#1d4ed8)' },
+  { id: 'l2', name: 'Downtown Loft',     loc: 'San Francisco, CA',   type: 'Apartment', bd: 1, ba: 1, rate: 180, aiRate: 195, occ: 92, rating: 4.8, reviews:  89, status: 'active',      ai: true,  grad: 'linear-gradient(135deg,#27272a,#3f3f46)' },
+  { id: 'l3', name: 'Mountain Cabin',    loc: 'Lake Tahoe, CA',      type: 'Cabin',     bd: 3, ba: 2, rate: 320, aiRate: 380, occ: 71, rating: 4.7, reviews:  56, status: 'active',      ai: true,  grad: 'linear-gradient(135deg,#14532d,#15803d)' },
+  { id: 'l4', name: 'Desert Retreat',    loc: 'Palm Springs, CA',    type: 'House',     bd: 2, ba: 2, rate: 220, aiRate: 210, occ: 45, rating: 4.5, reviews:  23, status: 'active',      ai: false, grad: 'linear-gradient(135deg,#7c2d12,#c2410c)' },
+  { id: 'l5', name: 'Beach Bungalow',    loc: 'Santa Barbara, CA',   type: 'Bungalow',  bd: 2, ba: 1, rate: 280, aiRate: 310, occ:  0, rating: 0,   reviews:   0, status: 'maintenance', ai: false, grad: 'linear-gradient(135deg,#164e63,#0891b2)' },
+];
+
+const AGENT_PERF = [
+  { role: 'COO', completed: 28, failed: 0, avg: 312, color: '#f59e0b' },
+  { role: 'CFO', completed: 35, failed: 0, avg:  89, color: '#34d399' },
+  { role: 'CMO', completed: 21, failed: 0, avg:  45, color: '#f472b6' },
+  { role: 'CTO', completed: 56, failed: 2, avg:  97, color: '#60a5fa' },
+  { role: 'CRO', completed: 14, failed: 0, avg:  33, color: '#f87171' },
+  { role: 'CEO', completed:  7, failed: 0, avg: 408, color: '#a78bfa' },
+];
+
+const WF_HISTORY = [
+  { wf: 'mrr_dashboard',          role: 'CFO', status: 'completed', ms:  89, result: '$18,240 MRR · +$320 this week' },
+  { wf: 'support_inbox_zero',     role: 'COO', status: 'completed', ms: 410, result: '12 emails · 4 drafts · 1 escalation' },
+  { wf: 'uptime_error_check',     role: 'CTO', status: 'completed', ms:  97, result: 'API healthy · 0 failed workflows' },
+  { wf: 'social_content_pipeline',role: 'CMO', status: 'completed', ms:  45, result: '3 posts queued for approval' },
+  { wf: 'pipeline_velocity',      role: 'CRO', status: 'completed', ms:  33, result: '$14.2/day · 3 at-risk deals' },
+  { wf: 'invoice_chaser',         role: 'CFO', status: 'completed', ms:  95, result: '4 drafts · $1,752 outstanding' },
+  { wf: 'bug_report_to_issue',    role: 'CTO', status: 'failed',    ms:  12, result: 'GITHUB_TOKEN not set' },
+  { wf: 'weekly_brief',           role: 'CEO', status: 'completed', ms: 408, result: '3 decision signals · all agents healthy' },
+];
+
+const MRR_TREND = [14200, 15100, 15800, 16900, 17600, 18240];
+
+const AUDIT_SEED = [
+  { ts: '03:22:04', action: 'mrr_dashboard', agent: 'CFO', input: '{period:"7d"}', output: '{mrr:18240, delta:+320, alerts:0}', guard: 'PASS', hitl: 'not_required' },
+  { ts: '08:44:11', action: 'support_inbox_zero', agent: 'COO', input: '{inbox:"support@complicore.live"}', output: '{emails:12, drafts:4, escalations:1}', guard: 'PASS', hitl: 'not_required' },
+  { ts: '09:01:33', action: 'client_onboarding', agent: 'COO', input: '{client:"Beach Villa Co."}', output: '{draft:"welcome_email", status:"awaiting_approval"}', guard: 'PASS', hitl: 'required — gmail_draft_send' },
+  { ts: '11:15:55', action: 'pipeline_velocity', agent: 'CRO', input: '{period:"7d"}', output: '{velocity:14.2, at_risk:3, conversion:0.31}', guard: 'PASS', hitl: 'not_required' },
+  { ts: '13:00:00', action: 'invoice_chaser', agent: 'CFO', input: '{days_overdue:7}', output: '{invoices:4, outstanding:"$1752", drafts:4}', guard: 'PASS', hitl: 'required — gmail_draft_send' },
+  { ts: '14:32:07', action: 'uptime_error_check', agent: 'CTO', input: '{services:["api","workers","db"]}', output: '{all_healthy:true, failed_workflows:0}', guard: 'PASS', hitl: 'not_required' },
+];
+
+// ── VIEW SWITCHING ────────────────────────────────────────────────────────────
+
+function showView(name, navEl) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (navEl) navEl.classList.add('active');
+  else {
+    document.querySelectorAll('.nav-item').forEach(n => {
+      if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + name + "'")) n.classList.add('active');
+    });
+  }
+  if (name === 'analytics') initAnalytics();
+  if (name === 'agents')    renderAgentControl();
+  if (name === 'listings')  renderListings(LISTINGS_DATA);
+  if (name === 'audit')     renderAudit();
+  if (name === 'dashboard') renderDashboard();
+}
+
+// ── DASHBOARD ────────────────────────────────────────────────────────────────
+
+function renderDashboard() {
+  renderDashAgents();
+  renderDashApprovals();
+  renderDashQuickActions();
+}
+
+function renderDashAgents() {
+  const grid = document.getElementById('dash-agent-grid');
+  grid.innerHTML = AGENTS.map(a => {
+    const dotClass = a.status === 'running' ? 'dot-green' : 'dot-gray';
+    const wfLabel = a.workflow ? (WORKFLOW_LABELS[a.workflow] || a.workflow) : 'idle';
+    return `
+      <div class="agent-card" style="background:${a.bg};border-color:${a.border}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <span class="agent-label" style="color:${a.color}">${a.label}</span>
+          <span class="dot ${dotClass}"></span>
+        </div>
+        <div class="agent-workflow" style="color:${a.status === 'running' ? '#a1a1aa' : '#52525b'}">${a.status === 'running' ? '▶ ' : ''}${wfLabel}</div>
+        <div class="agent-stats">
+          <span style="color:#4ade80;font-weight:600">${a.done}✓</span>
+          ${a.fail > 0 ? `<span style="color:#f87171">${a.fail}✗</span>` : ''}
+          <span style="color:#52525b">${relTime(a.lastRun)}</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderDashApprovals() {
+  const el = document.getElementById('dash-approvals');
+  const pending = APPROVALS.filter(a => !approvalStates[a.id]);
+  if (pending.length === 0) {
+    el.innerHTML = `<div style="padding:24px;background:#18181b;border:1px solid #27272a;border-radius:12px;text-align:center;font-size:13px;color:#52525b">No pending approvals — agents operating autonomously</div>`;
+    updateApprovalBadge(0);
+    return;
+  }
+  updateApprovalBadge(pending.length);
+  el.innerHTML = pending.map(a => `
+    <div class="approval-row" style="margin-bottom:8px">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" style="flex-shrink:0"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+          <span class="appr-badge" style="color:${a.color};background:${a.bg};border-color:${a.border}">${a.label}</span>
+          <span style="font-size:11px;color:#a1a1aa">${WORKFLOW_LABELS[a.workflow] || a.workflow}</span>
+          <span style="font-size:10px;color:#52525b">${a.age}</span>
+        </div>
+        <div style="font-size:12px;color:#d4d4d8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.summary}</div>
+      </div>
+      <div class="appr-actions">
+        <button class="btn-approve" onclick="handleApproval('${a.id}','approved')">✓ Approve</button>
+        <button class="btn-deny" onclick="handleApproval('${a.id}','denied')">✗ Deny</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderDashQuickActions() {
+  const el = document.getElementById('dash-quick-actions');
+  el.innerHTML = QUICK_ACTIONS.map(qa => {
+    const done = triggeredQA.has(qa.id);
+    return `
+      <button class="quick-action ${done ? 'done' : ''}" onclick="triggerQA('${qa.id}')">
+        <div class="qa-icon">${done ? '✓' : qa.icon}</div>
+        <div>
+          <div class="qa-label">${qa.label}</div>
+          <div class="qa-desc">${qa.desc}</div>
+        </div>
+      </button>`;
+  }).join('');
+}
+
+function handleApproval(id, decision) {
+  approvalStates[id] = decision;
+  renderDashApprovals();
+  renderAgentControl();
+  const pending = APPROVALS.filter(a => !approvalStates[a.id]).length;
+  document.getElementById('dash-appr-count').textContent = pending;
+  document.getElementById('ag-appr').textContent = pending;
+  document.getElementById('ag-tab-appr-badge').textContent = pending;
+  document.getElementById('sidebar-appr-badge').textContent = pending;
+  addAuditEntry({ action: 'human_approval', agent: 'OPERATOR', input: `{id:"${id}"}`, output: `{decision:"${decision}"}`, guard: 'N/A', hitl: decision === 'approved' ? 'APPROVED' : 'DENIED' });
+  showToast(decision === 'approved' ? '✓ Approved — agent executing' : '✗ Denied — action cancelled');
+}
+
+function updateApprovalBadge(count) {
+  const b = document.getElementById('dash-appr-badge');
+  b.textContent = count;
+  b.style.display = count > 0 ? 'inline-flex' : 'none';
+}
+
+function triggerQA(id) {
+  if (triggeredQA.has(id)) return;
+  triggeredQA.add(id);
+  const qa = QUICK_ACTIONS.find(q => q.id === id);
+  renderDashQuickActions();
+  addAuditEntry({ action: qa.label.toLowerCase().replace(/ /g,'_'), agent: qa.role.toUpperCase(), input: '{}', output: '{status:"triggered"}', guard: 'PASS', hitl: 'not_required' });
+  showToast('▷ ' + qa.label + ' triggered via orchestrator');
+}
+
+function refreshDash() {
+  document.getElementById('dash-refresh-ts').textContent = 'Refreshed just now';
+  showToast('Dashboard refreshed');
+}
+
+// ── AGENT CONTROL ─────────────────────────────────────────────────────────────
+
+function renderAgentControl() {
+  renderAgentCards();
+  renderAgentApprovals();
+  renderAgentHistory();
+}
+
+function renderAgentCards() {
+  const el = document.getElementById('ag-agent-cards');
+  el.innerHTML = AGENTS.map(a => {
+    const dotClass = a.status === 'running' ? 'dot-green' : 'dot-gray';
+    return `
+      <div style="border-radius:14px;border:1px solid ${a.border};background:${a.bg};padding:16px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:34px;height:34px;border-radius:9px;background:#111113;border:1px solid #27272a;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:${a.color}">${a.label[0]}</div>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:#f4f4f5">${a.label} Agent</div>
+              <div style="display:flex;align-items:center;gap:6px;margin-top:2px">
+                <span class="dot ${dotClass}"></span>
+                <span style="font-size:11px;color:#71717a;text-transform:capitalize">${a.status}</span>
+              </div>
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:10px;color:#71717a">today</div>
+            <div style="font-size:13px;font-weight:600">
+              <span style="color:#4ade80">${a.done}✓</span>
+              ${a.fail > 0 ? `<span style="color:#f87171;margin-left:4px">${a.fail}✗</span>` : ''}
+            </div>
+          </div>
+        </div>
+        ${a.workflow ? `<div style="font-size:11px;color:#a1a1aa;background:rgba(255,255,255,.05);border-radius:7px;padding:6px 10px;margin-bottom:8px">● ${WORKFLOW_LABELS[a.workflow] || a.workflow}</div>` : ''}
+        <div style="font-size:11px;color:#52525b">Last run: ${relTime(a.lastRun)}</div>
+      </div>`;
+  }).join('');
+}
+
+function renderAgentApprovals() {
+  const el = document.getElementById('ag-approvals-content');
+  const pending = APPROVALS.filter(a => !approvalStates[a.id]);
+  if (pending.length === 0) {
+    el.innerHTML = `<div style="text-align:center;padding:48px;font-size:13px;color:#52525b">No pending approvals.</div>`;
+    return;
+  }
+  el.innerHTML = pending.map(a => `
+    <div style="border:1px solid rgba(234,179,8,.25);background:rgba(234,179,8,.04);border-radius:14px;padding:16px;margin-bottom:12px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" style="flex-shrink:0"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#f4f4f5">
+              ${WORKFLOW_LABELS[a.workflow] || a.workflow}
+              <span class="appr-badge" style="margin-left:8px;color:${a.color};background:${a.bg};border-color:${a.border}">${a.label}</span>
+            </div>
+            <div style="font-size:11px;color:#fbbf24;margin-top:2px">${a.action.replace(/_/g,' ')}</div>
+          </div>
+        </div>
+        <span style="font-size:11px;color:#52525b">${a.age}</span>
+      </div>
+      <div style="background:#111113;border-radius:9px;padding:12px;margin-bottom:12px;border:1px solid #1f1f23">
+        ${Object.entries(a.payload).map(([k,v]) => `<div style="display:flex;gap:8px;margin-bottom:4px;font-size:12px"><span style="font-weight:600;color:#52525b;width:120px;flex-shrink:0">${k.replace(/_/g,' ')}:</span><span style="color:#a1a1aa">${v}</span></div>`).join('')}
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-approve" onclick="handleApproval('${a.id}','approved')">✓ Approve</button>
+        <button class="btn-deny" onclick="handleApproval('${a.id}','denied')">✗ Deny</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderAgentHistory() {
+  const el = document.getElementById('ag-history-list');
+  el.innerHTML = HISTORY.map(t => {
+    const statusBadge = {
+      running: '<span class="badge badge-blue">Running</span>',
+      completed: '<span class="badge badge-green">Done</span>',
+      failed: '<span class="badge badge-red">Failed</span>',
+      awaiting_approval: '<span class="badge badge-amber">Approval</span>',
+    }[t.status] || '';
+    const dotClass = { running:'dot-green', completed:'dot-green', failed:'dot-red', awaiting_approval:'dot-amber' }[t.status] || 'dot-gray';
+    const agent = AGENTS.find(a => a.role === t.role);
+    const expanded = expandedHistItem === t.id;
+    return `
+      <div class="hist-row-wrap">
+        <div class="hist-row" onclick="toggleHist('${t.id}')">
+          <span class="dot ${dotClass}"></span>
+          <span class="appr-badge" style="color:${agent.color};background:${agent.bg};border-color:${agent.border}">${t.label}</span>
+          <span style="flex:1;font-size:13px;color:#e4e4e7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${WORKFLOW_LABELS[t.workflow] || t.workflow}</span>
+          ${statusBadge}
+          <span style="font-size:11px;color:#52525b;flex-shrink:0">${t.started}</span>
+          <span style="font-size:12px;color:#52525b">${expanded ? '▾' : '▸'}</span>
+        </div>
+        <div class="hist-details ${expanded ? 'open' : ''}">
+          <div class="detail-row"><span class="detail-key">Task ID:</span><code style="color:#71717a">${t.id}</code></div>
+          <div class="detail-row"><span class="detail-key">Started:</span><span>${t.started}</span></div>
+          ${t.result ? `<div class="detail-row"><span class="detail-key">Result:</span><span style="color:#4ade80">${t.result}</span></div>` : ''}
+          ${t.error ? `<div class="detail-row"><span class="detail-key">Error:</span><code style="color:#f87171">${t.error}</code></div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function toggleHist(id) {
+  expandedHistItem = expandedHistItem === id ? null : id;
+  renderAgentHistory();
+}
+
+function switchAgentTab(tab, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  ['overview','queue','approvals','history'].forEach(t => {
+    const el = document.getElementById('ag-tab-' + t);
+    if (el) el.style.display = t === tab ? '' : 'none';
+  });
+  if (tab === 'approvals') renderAgentApprovals();
+}
+
+function refreshAgents() {
+  renderAgentControl();
+  showToast('Agent panel refreshed');
+}
+
+// ── ANALYTICS ────────────────────────────────────────────────────────────────
+
+let mrrChart = null;
+function initAnalytics() {
+  renderAgentPerf();
+  renderWfHistory();
+  setTimeout(() => renderMrrChart(), 50);
+}
+
+function renderMrrChart() {
+  const ctx = document.getElementById('mrr-chart');
+  if (!ctx) return;
+  if (mrrChart) { mrrChart.destroy(); }
+  mrrChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ['W7','W8','W9','W10','W11','W12'],
+      datasets: [{
+        data: MRR_TREND,
+        borderColor: '#34d399',
+        backgroundColor: 'rgba(52,211,153,.08)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        pointBackgroundColor: '#34d399',
+        pointBorderColor: '#09090b',
+        pointBorderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: { label: ctx => '$' + ctx.parsed.y.toLocaleString() },
+        backgroundColor: '#1c1c20', titleColor: '#f4f4f5', bodyColor: '#a1a1aa', borderColor: '#3f3f46', borderWidth: 1,
+      }},
+      scales: {
+        x: { grid: { color: '#1f1f23' }, ticks: { color: '#71717a', font: { size: 11 } } },
+        y: { grid: { color: '#1f1f23' }, ticks: { color: '#71717a', font: { size: 11 }, callback: v => '$' + (v/1000).toFixed(0) + 'k' } }
+      }
+    }
+  });
+}
+
+function setPeriod(p, btn) {
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  showToast('Period set to ' + p);
+}
+
+function renderAgentPerf() {
+  const el = document.getElementById('agent-perf-bars');
+  el.innerHTML = AGENT_PERF.map(a => {
+    const total = a.completed + a.failed;
+    const pct = Math.round((a.completed / total) * 100);
+    return `
+      <div style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:12px;font-weight:600;color:#d4d4d8">${a.role}</span>
+          <div style="display:flex;gap:10px;font-size:11px;color:#71717a">
+            <span>${a.completed} runs</span>
+            ${a.failed > 0 ? `<span style="color:#f87171">${a.failed} failed</span>` : ''}
+            <span>${a.avg}ms avg</span>
+          </div>
+        </div>
+        <div class="prog-track"><div class="prog-fill" style="width:${pct}%;background:${a.color}"></div></div>
+      </div>`;
+  }).join('');
+}
+
+function renderWfHistory() {
+  const el = document.getElementById('workflow-history');
+  el.innerHTML = WF_HISTORY.map(w => `
+    <div style="display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid rgba(39,39,42,.6)">
+      <span style="color:${w.status==='completed'?'#4ade80':'#f87171'};flex-shrink:0;margin-top:1px">${w.status==='completed'?'✓':'✗'}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:600;color:#d4d4d8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${w.wf}</div>
+        <div style="font-size:10px;color:#52525b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${w.result}</div>
+      </div>
+      <span style="font-size:10px;color:#52525b;flex-shrink:0">${w.ms}ms</span>
+    </div>`).join('');
+}
+
+// ── LISTINGS ─────────────────────────────────────────────────────────────────
+
+function renderListings(data) {
+  const el = document.getElementById('listings-list');
+  const statusStyle = { active: 'color:#4ade80;background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.2)', inactive: 'color:#71717a', maintenance: 'color:#fbbf24;background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.2)' };
+  const occColor = occ => occ > 70 ? '#4ade80' : occ > 40 ? '#fbbf24' : '#f87171';
+  el.innerHTML = data.map(l => `
+    <div class="listing-row">
+      <div class="listing-img" style="background:${l.grad}">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+          <span style="font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.name}</span>
+          <span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;border:1px solid;flex-shrink:0;${statusStyle[l.status]}">${l.status}</span>
+        </div>
+        <div style="font-size:11px;color:#71717a;margin-bottom:4px">📍 ${l.loc} · ${l.bd}bd ${l.ba}ba · ${l.type}</div>
+        <div style="display:flex;align-items:center;gap:12px;font-size:11px">
+          ${l.ai ? `<span style="color:#34d399">⚡ AI: $${l.aiRate}/night <span style="color:#52525b">vs $${l.rate} base</span></span>` : `<span style="color:#52525b">$${l.rate}/night · No AI pricing</span>`}
+          ${l.rating > 0 ? `<span style="color:#a1a1aa">⭐ ${l.rating} (${l.reviews})</span>` : ''}
+        </div>
+      </div>
+      <div class="occ-bar-wrap">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#71717a">
+          <span>30d occ.</span>
+          <span style="color:${occColor(l.occ)}">${l.occ}%</span>
+        </div>
+        <div class="occ-track"><div class="occ-fill" style="width:${l.occ}%;background:${occColor(l.occ)}"></div></div>
+      </div>
+      <button onclick="showToast('Opening ${l.name}...')" style="background:none;border:none;color:#52525b;cursor:pointer;padding:4px;transition:color .15s" onmouseenter="this.style.color='#e4e4e7'" onmouseleave="this.style.color='#52525b'">›</button>
+    </div>`).join('');
+}
+
+function filterListings(q) {
+  const filtered = LISTINGS_DATA.filter(l => l.name.toLowerCase().includes(q.toLowerCase()) || l.loc.toLowerCase().includes(q.toLowerCase()));
+  renderListings(filtered);
+}
+
+// ── AUDIT TRAIL ───────────────────────────────────────────────────────────────
+
+let auditEntries = [];
+
+function renderAudit() {
+  if (auditEntries.length === 0) {
+    auditEntries = [...AUDIT_SEED];
+  }
+  flushAudit();
+}
+
+function flushAudit() {
+  const el = document.getElementById('audit-log');
+  el.innerHTML = auditEntries.map(e => `
+    <div class="audit-entry">
+      <span class="audit-ts">[2026-03-19T${e.ts}Z]</span>
+      <span class="audit-action"> ACTION: ${e.action.toUpperCase()}</span><br>
+      <span class="audit-field">  AGENT:</span> <span class="audit-agent">${e.agent}</span>
+      <span class="audit-field"> | TRIGGERED_BY:</span> <span class="audit-value">workflow_scheduler</span><br>
+      <span class="audit-field">  INPUT:</span> <span class="audit-value">${e.input}</span><br>
+      <span class="audit-field">  OUTPUT:</span> <span class="audit-value">${e.output}</span><br>
+      <span class="audit-field">  GUARDRAILS:</span> <span class="audit-pass">${e.guard}</span>
+      <span class="audit-field"> | HUMAN_APPROVAL:</span> <span class="${e.hitl.startsWith('required')||e.hitl==='APPROVED'||e.hitl==='DENIED' ? 'audit-agent' : 'audit-pass'}">${e.hitl}</span>
+    </div>`).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function addAuditEntry(entry) {
+  const now = new Date();
+  const ts = now.toTimeString().slice(0,8);
+  auditEntries.push({ ...entry, ts });
+  const el = document.getElementById('audit-log');
+  if (el && el.closest('.view.active')) flushAudit();
+}
+
+function clearAudit() {
+  auditEntries = [];
+  document.getElementById('audit-log').innerHTML = `<div style="text-align:center;padding:40px;font-size:13px;color:#52525b">Audit log cleared. Interact with the platform to generate new entries.</div>`;
+}
+
+// ── TRIGGER MODAL ─────────────────────────────────────────────────────────────
+
+let selectedWorkflow = null;
+
+function openTriggerModal() {
+  selectedWorkflow = null;
+  document.getElementById('modal-run-btn').disabled = true;
+  document.getElementById('modal-search-input').value = '';
+  renderModalList('');
+  document.getElementById('trigger-modal').classList.add('open');
+  setTimeout(() => document.getElementById('modal-search-input').focus(), 100);
+}
+
+function closeTriggerModal(e) {
+  if (!e || e.target === document.getElementById('trigger-modal')) {
+    document.getElementById('trigger-modal').classList.remove('open');
+  }
+}
+
+function renderModalList(filter) {
+  const el = document.getElementById('modal-workflow-list');
+  const filtered = TRIGGERABLE_WORKFLOWS.filter(w => {
+    const label = WORKFLOW_LABELS[w.workflow] || w.workflow;
+    return label.toLowerCase().includes(filter.toLowerCase()) || w.role.includes(filter.toLowerCase());
+  });
+  const agentColors = { coo:'#f59e0b', cfo:'#34d399', cmo:'#f472b6', cto:'#60a5fa', cro:'#f87171', ceo:'#a78bfa' };
+  el.innerHTML = filtered.map(w => {
+    const label = WORKFLOW_LABELS[w.workflow] || w.workflow;
+    const c = agentColors[w.role] || '#71717a';
+    const sel = selectedWorkflow && selectedWorkflow.workflow === w.workflow && selectedWorkflow.role === w.role;
+    return `
+      <div class="modal-item ${sel ? 'selected' : ''}" onclick="selectWorkflow('${w.role}','${w.workflow}')">
+        <span style="font-size:10px;font-weight:800;padding:2px 6px;border-radius:5px;border:1px solid;color:${c};background:rgba(${hexToRgb(c)},.12);border-color:rgba(${hexToRgb(c)},.25)">${w.role.toUpperCase()}</span>
+        <span style="font-size:13px;color:#e4e4e7">${label}</span>
+      </div>`;
+  }).join('');
+}
+
+function filterWorkflows(q) { renderModalList(q); }
+
+function selectWorkflow(role, workflow) {
+  selectedWorkflow = { role, workflow };
+  document.getElementById('modal-run-btn').disabled = false;
+  renderModalList(document.getElementById('modal-search-input').value);
+}
+
+function runSelectedWorkflow() {
+  if (!selectedWorkflow) return;
+  const label = WORKFLOW_LABELS[selectedWorkflow.workflow] || selectedWorkflow.workflow;
+  closeTriggerModal();
+  addAuditEntry({
+    action: selectedWorkflow.workflow,
+    agent: selectedWorkflow.role.toUpperCase(),
+    input: '{}',
+    output: '{status:"triggered_manually"}',
+    guard: 'PASS',
+    hitl: 'not_required'
+  });
+  showToast('▷ ' + label + ' triggered (' + selectedWorkflow.role.toUpperCase() + ')');
+}
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return `${r},${g},${b}`;
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+
+function relTime(mins) {
+  const m = Math.abs(mins);
+  if (m < 60) return m + 'm ago';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  return Math.floor(h / 24) + 'd ago';
+}
+
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+
+renderDashboard();
+</script>
+</body>
+</html>

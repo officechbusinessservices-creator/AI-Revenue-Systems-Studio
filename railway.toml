@@ -1,0 +1,16 @@
+# =============================================================================
+# Railway / Railpack build configuration — CompliCore
+# Docs: https://docs.railway.com/reference/config-as-code
+# =============================================================================
+
+[build]
+# Install from the pinned lock file instead of the loose requirements.txt.
+# This eliminates pip's dependency-resolution backtracking (grpcio / grpcio-tools
+# / googleapis-common-protos) and cuts build time from 10+ min to < 2 min.
+builder = "railpack"
+buildCommand = "pip install --no-deps -r requirements.lock"
+
+[deploy]
+startCommand = "python main.py"
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
