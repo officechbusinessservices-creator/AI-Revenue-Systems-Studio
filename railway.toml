@@ -14,8 +14,4 @@ buildCommand = "pip install --no-deps -r requirements.lock"
 startCommand = "python main.py"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
-pip install pip-tools
-pip-compile requirements.in  # or whatever your source file is
-git commit -am "Fix: regenerate requirements.lock"
-git push
 
