@@ -286,8 +286,11 @@ def _call_claude(api_key: str, system_prompt: str, user_message: str, workflow: 
         return text
 
     except Exception as exc:
-        err_type = type(exc).__name__
-        return f"[{err_type}] Agent execution issue — check ANTHROPIC_API_KEY and retry."
+        import traceback
+        tb_lines = traceback.format_exc().splitlines()
+        # Return last 3 traceback lines + error for diagnosis
+        tb_short = " | ".join(tb_lines[-3:])[:250]
+        return f"[{type(exc).__name__}] {str(exc)[:80]} || {tb_short}"
 
 
 # ── Skill direct-run ──────────────────────────────────────────────────────────
