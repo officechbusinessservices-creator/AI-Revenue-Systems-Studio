@@ -242,36 +242,52 @@ async def execute_workflow(
 
 
 def _call_claude(api_key: str, system_prompt: str, user_message: str, workflow: str) -> str:
-    """Synchronous Claude API call (runs in thread pool)."""
-    try:
-        import anthropic
+    """
+    Synchronous Claude API call via raw httpx (runs in thread pool).
 
-        client = anthropic.Anthropic(api_key=api_key)
+    Uses the Anthropic Messages REST API directly to avoid SDK version
+    compatibility issues (anthropic==0.28.0 conflicts with newer httpx).
+    """
+    try:
+        import httpx
+        import json as _json
+
         model = _select_model(workflow)
 
-        # Ensure all text is ASCII-safe (guards against UnicodeEncodeError
-        # on Railway/Linux systems where LANG may be POSIX/C)
-        system_prompt = _ascii_safe(system_prompt)
-        user_message = _ascii_safe(user_message)
+        payload = {
+            "model": model,
+            "max_tokens": 512,
+            "system": system_prompt,
+            "messages": [{"role": "user", "content": user_message}],
+        }
 
-        response = client.messages.create(
-            model=model,
-            max_tokens=512,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_message}],
-        )
-        text = response.content[0].text.strip()
-        # Truncate to ~400 chars for dashboard display — full text available in detail view
+        headers = {
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        }
+
+        with httpx.Client(timeout=45.0) as client:
+            response = client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers=headers,
+                content=_json.dumps(payload, ensure_ascii=True).encode("ascii"),
+            )
+
+        if response.status_code != 200:
+            err = response.json().get("error", {}).get("message", response.text[:120])
+            return f"[API {response.status_code}] {err}"
+
+        data = response.json()
+        text = data["content"][0]["text"].strip()
+        # Truncate to 400 chars for dashboard display
         if len(text) > 400:
-            text = text[:397] + "…"
+            text = text[:397] + "..."
         return text
 
-    except ImportError:
-        return "[anthropic package not installed] pip install anthropic to enable live AI."
     except Exception as exc:
-        # Surface the error type but not sensitive details
         err_type = type(exc).__name__
-        return f"[{err_type}] Agent execution encountered an issue — check ANTHROPIC_API_KEY and retry."
+        return f"[{err_type}] Agent execution issue — check ANTHROPIC_API_KEY and retry."
 
 
 # ── Skill direct-run ──────────────────────────────────────────────────────────
