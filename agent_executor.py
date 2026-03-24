@@ -20,12 +20,18 @@ from typing import Any
 
 SKILLS_DIR = pathlib.Path(__file__).parent / ".agents" / "skills"
 
+def _ascii_safe(text: str) -> str:
+    """Replace non-ASCII characters to avoid UnicodeEncodeError on systems
+    with non-UTF8 locale (e.g. Railway with LANG=C)."""
+    return text.encode("ascii", errors="replace").decode("ascii")
+
+
 def _load_skill(name: str, max_chars: int = 1200) -> str:
     """Load condensed skill context from a SKILL.md file."""
     skill_path = SKILLS_DIR / name / "SKILL.md"
     if not skill_path.exists():
         return ""
-    text = skill_path.read_text(encoding="utf-8")
+    text = skill_path.read_text(encoding="utf-8", errors="replace")
     # Strip YAML front-matter (--- ... ---)
     lines = text.splitlines()
     start = 0
@@ -36,8 +42,8 @@ def _load_skill(name: str, max_chars: int = 1200) -> str:
         except ValueError:
             start = 0
     body = "\n".join(lines[start:]).strip()
-    # Return first max_chars chars for context budget
-    return body[:max_chars]
+    # Sanitize to ASCII and return first max_chars chars for context budget
+    return _ascii_safe(body)[:max_chars]
 
 
 def _build_skill_context(skill_names: list[str]) -> str:
@@ -242,6 +248,11 @@ def _call_claude(api_key: str, system_prompt: str, user_message: str, workflow: 
 
         client = anthropic.Anthropic(api_key=api_key)
         model = _select_model(workflow)
+
+        # Ensure all text is ASCII-safe (guards against UnicodeEncodeError
+        # on Railway/Linux systems where LANG may be POSIX/C)
+        system_prompt = _ascii_safe(system_prompt)
+        user_message = _ascii_safe(user_message)
 
         response = client.messages.create(
             model=model,
