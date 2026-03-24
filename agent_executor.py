@@ -252,6 +252,19 @@ def _call_claude(api_key: str, system_prompt: str, user_message: str, workflow: 
         import httpx
         import json as _json
 
+        # ── Validate & sanitize API key ────────────────────────────────────
+        # Anthropic API keys are always pure ASCII (sk-ant-...).
+        # If the key has non-ASCII chars it was copy-pasted incorrectly.
+        api_key_ascii = api_key.encode("ascii", errors="replace").decode("ascii")
+        if api_key_ascii != api_key:
+            bad_chars = [f"U+{ord(c):04X}" for c in api_key if ord(c) > 127][:3]
+            return (
+                f"[Config Error] ANTHROPIC_API_KEY contains non-ASCII characters "
+                f"({', '.join(bad_chars)}). "
+                "Please re-set it in Railway > Variables with the correct key text."
+            )
+        api_key = api_key_ascii
+
         model = _select_model(workflow)
 
         payload = {
