@@ -30,6 +30,13 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+# ── Super-agent AI execution engine ────────────────────────────────────────────
+try:
+    from agent_executor import execute_workflow as _execute_workflow, run_skill_direct as _run_skill_direct
+    _EXECUTOR_LOADED = True
+except ImportError:
+    _EXECUTOR_LOADED = False
+
 # ── App bootstrap ──────────────────────────────────────────────────────────────
 
 app = FastAPI(
@@ -236,24 +243,24 @@ async def trigger_workflow(body: TriggerPayload):
         AGENT_STATES[body.role]["current_workflow"] = body.workflow
         AGENT_STATES[body.role]["last_run_at"] = new_run["started_at"]
 
-    # Attempt live skill execution if ANTHROPIC_API_KEY is set
-    if os.getenv("ANTHROPIC_API_KEY"):
+    # ── Real AI execution via agent_executor ──────────────────────────────────
+    if _EXECUTOR_LOADED:
         try:
-            import importlib
-            plugin_slug = body.role
-            module_path = f"plugins.role_{plugin_slug}.skills.{body.workflow}.handler"
-            mod = importlib.import_module(module_path)
-            ai_result = mod.run({**body.payload, "workspace": body.workspace})
+            ai_result = await _execute_workflow(
+                role=body.role,
+                workflow=body.workflow,
+                payload={**body.payload, "workspace": body.workspace},
+            )
             new_run["status"]       = "completed"
             new_run["completed_at"] = datetime.now(timezone.utc).isoformat()
-            new_run["result"]       = str(ai_result)[:200] if ai_result else "Completed"
-        except Exception:
+            new_run["result"]       = ai_result
+        except Exception as exc:
             new_run["status"]       = "completed"
-            new_run["result"]       = f"Triggered via orchestrator"
+            new_run["result"]       = f"Agent error: {type(exc).__name__}"
             new_run["completed_at"] = datetime.now(timezone.utc).isoformat()
     else:
         new_run["status"]       = "completed"
-        new_run["result"]       = "Dispatched (seed mode — set ANTHROPIC_API_KEY for live execution)"
+        new_run["result"]       = "Dispatched (agent_executor not loaded)"
         new_run["completed_at"] = datetime.now(timezone.utc).isoformat()
 
     if body.role in AGENT_STATES:
@@ -356,22 +363,26 @@ async def get_billing_plans():
 
 @app.post("/v1/skills/run")
 async def run_skill(body: SkillRunPayload):
-    if not os.getenv("ANTHROPIC_API_KEY"):
+    if not _EXECUTOR_LOADED:
         return {
             "plugin":  body.plugin,
             "skill":   body.skill,
-            "status":  "seed_mode",
-            "message": "Set ANTHROPIC_API_KEY to enable live skill execution.",
-            "result":  {"note": "Seed data — connect ANTHROPIC_API_KEY for live output"},
+            "status":  "unavailable",
+            "message": "agent_executor not loaded.",
+            "result":  {"note": "agent_executor import failed"},
         }
+    role = body.plugin.replace("role-", "").lower()
     try:
-        import importlib
-        plugin_slug = body.plugin.replace("role-", "")
-        module_path = f"plugins.role_{plugin_slug}.skills.{body.skill}.handler"
-        mod    = importlib.import_module(module_path)
-        result = mod.run({**body.payload, "workspace": body.workspace})
-        return {"plugin": body.plugin, "skill": body.skill, "status": "ok", "result": result}
-    except ModuleNotFoundError:
-        raise HTTPException(status_code=404, detail=f"Skill not found: {body.plugin}/{body.skill}")
+        result = await _run_skill_direct(
+            role=role,
+            skill=body.skill,
+            payload={**body.payload, "workspace": body.workspace, "task": body.payload.get("task")},
+        )
+        return {
+            "plugin": body.plugin,
+            "skill":  body.skill,
+            "status": "ok" if not result.startswith("[seed mode]") else "seed_mode",
+            "result": result,
+        }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
