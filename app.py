@@ -25,6 +25,7 @@ import os
 import uuid
 from datetime import datetime, timezone, timedelta
 from typing import Any
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,6 +38,90 @@ try:
 except ImportError:
     _EXECUTOR_LOADED = False
 
+# ── Postgres persistence (optional — falls back to in-memory) ──────────────────
+_db_pool = None
+
+async def _init_db():
+    """Connect to Railway Postgres and create tables if not present."""
+    global _db_pool
+    db_url = os.getenv("DATABASE_URL", "")
+    if not db_url:
+        return
+    try:
+        import asyncpg
+        _db_pool = await asyncpg.create_pool(db_url, min_size=1, max_size=5, command_timeout=10)
+        async with _db_pool.acquire() as conn:
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS workflow_runs (
+                    id          TEXT PRIMARY KEY,
+                    role        TEXT NOT NULL,
+                    workflow    TEXT NOT NULL,
+                    status      TEXT NOT NULL,
+                    result      TEXT,
+                    error       TEXT,
+                    started_at  TIMESTAMPTZ NOT NULL,
+                    completed_at TIMESTAMPTZ
+                );
+                CREATE TABLE IF NOT EXISTS agent_approvals (
+                    id           TEXT PRIMARY KEY,
+                    role         TEXT NOT NULL,
+                    workflow     TEXT NOT NULL,
+                    action_type  TEXT NOT NULL,
+                    summary      TEXT,
+                    status       TEXT NOT NULL DEFAULT 'pending',
+                    decided_by   TEXT,
+                    decided_at   TIMESTAMPTZ,
+                    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                );
+            """)
+    except Exception as exc:
+        print(f"[DB] Postgres init failed (running in-memory): {exc}")
+        _db_pool = None
+
+async def _persist_run(run: dict):
+    """Persist a completed workflow run to Postgres if available."""
+    if not _db_pool:
+        return
+    try:
+        async with _db_pool.acquire() as conn:
+            await conn.execute("""
+                INSERT INTO workflow_runs (id, role, workflow, status, result, error, started_at, completed_at)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+                ON CONFLICT (id) DO UPDATE SET
+                    status=EXCLUDED.status, result=EXCLUDED.result,
+                    error=EXCLUDED.error, completed_at=EXCLUDED.completed_at
+            """,
+            run["id"], run["role"], run["workflow"], run["status"],
+            run.get("result"), run.get("error"),
+            datetime.fromisoformat(run["started_at"]),
+            datetime.fromisoformat(run["completed_at"]) if run.get("completed_at") else None,
+            )
+    except Exception as exc:
+        print(f"[DB] persist_run failed: {exc}")
+
+async def _load_history_from_db(limit: int = 20) -> list[dict] | None:
+    """Load recent workflow runs from Postgres. Returns None if unavailable."""
+    if not _db_pool:
+        return None
+    try:
+        async with _db_pool.acquire() as conn:
+            rows = await conn.fetch("""
+                SELECT id, role, workflow, status, result, error,
+                       started_at, completed_at
+                FROM workflow_runs
+                ORDER BY started_at DESC
+                LIMIT $1
+            """, limit)
+        return [dict(r) for r in rows]
+    except Exception as exc:
+        print(f"[DB] load_history failed: {exc}")
+        return None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await _init_db()
+    yield
+
 # ── App bootstrap ──────────────────────────────────────────────────────────────
 
 app = FastAPI(
@@ -45,6 +130,7 @@ app = FastAPI(
     description="AI Revenue Systems Studio — autonomous agent backend",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 ALLOWED_ORIGINS = [
@@ -181,7 +267,7 @@ async def health():
         "agents_running_list": running,
         "agents_total":        len(AGENT_STATES),
         "pending_approvals":   len([a for a in APPROVALS if a["status"] == "pending"]),
-        "database":            "memory" if not os.getenv("DATABASE_URL") else "postgres",
+        "database":            "postgres" if _db_pool else "memory",
         "anthropic_connected": bool(os.getenv("ANTHROPIC_API_KEY")),
     }
 
@@ -267,6 +353,9 @@ async def trigger_workflow(body: TriggerPayload):
         AGENT_STATES[body.role]["status"] = "idle"
         AGENT_STATES[body.role]["current_workflow"] = None
         AGENT_STATES[body.role]["completed_today"] += 1
+
+    # Persist to Postgres asynchronously (non-blocking)
+    await _persist_run(new_run)
 
     return {
         "workflow_id":   workflow_id,

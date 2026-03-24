@@ -280,12 +280,22 @@ def _call_claude(api_key: str, system_prompt: str, user_message: str, workflow: 
             "content-type": "application/json",
         }
 
-        with httpx.Client(timeout=45.0) as client:
-            response = client.post(
-                "https://api.anthropic.com/v1/messages",
-                headers=headers,
-                content=_json.dumps(payload, ensure_ascii=True).encode("ascii"),
-            )
+        import time as _time
+
+        # Retry up to 2 times on 429 rate-limit with backoff
+        max_retries = 2
+        response = None
+        for attempt in range(max_retries + 1):
+            with httpx.Client(timeout=45.0) as client:
+                response = client.post(
+                    "https://api.anthropic.com/v1/messages",
+                    headers=headers,
+                    content=_json.dumps(payload, ensure_ascii=True).encode("ascii"),
+                )
+            if response.status_code != 429:
+                break
+            if attempt < max_retries:
+                _time.sleep(1.5 * (attempt + 1))  # 1.5s, then 3s
 
         if response.status_code != 200:
             err = response.json().get("error", {}).get("message", response.text[:120])
