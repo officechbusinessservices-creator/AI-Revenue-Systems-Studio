@@ -4,8 +4,6 @@
 
 CompliCore is a short-term rental operations platform where AI agents run your business operations — invoicing, onboarding, content marketing, pipeline management, engineering workflows, and strategic intelligence — continuously, on schedule, without requiring you to remember.
 
-**Want to commercialize this immediately?** Start with `CUSTOMER_READY_SALES_PLAYBOOK.md` for packaging, proof assets, pricing, and a 30-day sell-to-delivery plan.
-
 ---
 
 ## What's Running
