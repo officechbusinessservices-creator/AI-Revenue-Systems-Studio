@@ -1,3 +1,5 @@
+[![Python Package using Conda](https://github.com/officechbusinessservices-creator/AI-Revenue-Systems-Studio/actions/workflows/python-package-conda.yml/badge.svg)](https://github.com/officechbusinessservices-creator/AI-Revenue-Systems-Studio/actions/workflows/python-package-conda.yml)
+
 # CompliCore
 
 **Maximum revenue. Zero compliance headaches. Six autonomous AI agents.**
