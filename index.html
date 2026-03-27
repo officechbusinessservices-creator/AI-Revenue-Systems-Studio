@@ -273,7 +273,7 @@
       <div class="pulse-dot"></div>
       <span>2 agents running</span>
     </div>
-    <div style="font-size:10px;color:#3f3f46;margin-top:6px">46 skills · 28 workflows</div>
+    <div id="global-sync-status" style="font-size:10px;color:#3f3f46;margin-top:6px">46 skills · 28 workflows · waiting for sync</div>
   </div>
 </aside>
 
@@ -292,6 +292,7 @@
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
           Refresh
         </button>
+        <button class="btn-ghost" id="auto-refresh-btn" onclick="toggleAutoRefresh()">Auto-refresh: on</button>
         <button class="btn-ghost" onclick="showView('agents', document.querySelector('.nav-item:nth-child(4)'))">Agent Control →</button>
       </div>
     </div>
@@ -712,6 +713,10 @@
 // ── API LAYER ────────────────────────────────────────────────────────────────
 const API_BASE = 'https://web-production-17a8e.up.railway.app';
 let apiConnected = false;
+let autoRefreshEnabled = true;
+let autoRefreshTimer = null;
+let lastRefreshAt = null;
+let isRefreshing = false;
 
 async function api(path, opts = {}) {
   try {
@@ -734,7 +739,24 @@ const AGENT_COLORS = {
   ceo: { color: '#a78bfa', bg: 'rgba(167,139,250,.1)', border: 'rgba(167,139,250,.2)' },
 };
 
+async function refreshLiveData({ redrawAgents = true } = {}) {
+  if (isRefreshing) return false;
+  isRefreshing = true;
+  try {
+    await loadLiveData();
+    renderDashboard();
+    if (redrawAgents && document.getElementById('view-agents').classList.contains('active')) {
+      renderAgentControl();
+    }
+    stampRefreshedNow();
+    return true;
+  } finally {
+    isRefreshing = false;
+  }
+}
+
 async function loadLiveData() {
+  apiConnected = false;
   const [status, apprData, analytics] = await Promise.all([
     api('/v1/orchestrator/status'),
     api('/v1/orchestrator/approvals'),
@@ -786,6 +808,7 @@ function updateConnectionStatus() {
   if (!footer) return;
   const dot = footer.querySelector('.pulse-dot');
   const label = footer.querySelector('.agent-live span');
+  const sync = document.getElementById('global-sync-status');
   const running = AGENTS.filter(a => a.status === 'running').length;
   if (apiConnected) {
     if (dot) dot.style.background = '#22c55e';
@@ -794,6 +817,34 @@ function updateConnectionStatus() {
     if (dot) dot.style.background = '#f59e0b';
     if (label) label.textContent = running + ' agents running · seed mode';
   }
+  if (sync) {
+    const mode = apiConnected ? 'live data' : 'seed mode';
+    const stamp = lastRefreshAt ? `last sync ${lastRefreshAt.toLocaleTimeString()}` : 'waiting for sync';
+    sync.textContent = `46 skills · 28 workflows · ${mode} · ${stamp}`;
+  }
+}
+
+function stampRefreshedNow() {
+  lastRefreshAt = new Date();
+  const ts = document.getElementById('dash-refresh-ts');
+  if (ts) ts.textContent = 'Refreshed at ' + lastRefreshAt.toLocaleTimeString();
+  updateConnectionStatus();
+}
+
+function startAutoRefresh() {
+  if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+  if (!autoRefreshEnabled || document.hidden) return;
+  autoRefreshTimer = setInterval(() => {
+    refreshLiveData({ redrawAgents: true });
+  }, 30000);
+}
+
+function toggleAutoRefresh() {
+  autoRefreshEnabled = !autoRefreshEnabled;
+  const btn = document.getElementById('auto-refresh-btn');
+  if (btn) btn.textContent = `Auto-refresh: ${autoRefreshEnabled ? 'on' : 'off'}`;
+  startAutoRefresh();
+  showToast(autoRefreshEnabled ? 'Auto-refresh enabled (30s)' : 'Auto-refresh paused');
 }
 
 // ── DATA ────────────────────────────────────────────────────────────────────
@@ -1070,9 +1121,7 @@ async function triggerQA(id) {
 }
 
 async function refreshDash() {
-  await loadLiveData();
-  renderDashboard();
-  document.getElementById('dash-refresh-ts').textContent = 'Refreshed just now';
+  await refreshLiveData({ redrawAgents: false });
   showToast(apiConnected ? '✓ Dashboard refreshed from API' : 'Dashboard refreshed (seed mode)');
 }
 
@@ -1195,8 +1244,7 @@ function switchAgentTab(tab, btn) {
 }
 
 async function refreshAgents() {
-  await loadLiveData();
-  renderAgentControl();
+  await refreshLiveData({ redrawAgents: true });
   showToast(apiConnected ? '✓ Agent panel refreshed from API' : 'Agent panel refreshed (seed mode)');
 }
 
@@ -1518,10 +1566,22 @@ function showToast(msg) {
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
 
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+    return;
+  }
+  if (autoRefreshEnabled) {
+    refreshLiveData({ redrawAgents: true });
+    startAutoRefresh();
+  }
+});
+
 (async function init() {
   renderDashboard();             // show seed data instantly
-  await loadLiveData();          // upgrade with live API data
-  renderDashboard();             // re-render with live data
+  await refreshLiveData({ redrawAgents: true });
+  startAutoRefresh();
 })();
 </script>
 </body>
