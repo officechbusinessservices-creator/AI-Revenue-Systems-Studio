@@ -836,6 +836,12 @@ function startAutoRefresh() {
   if (!autoRefreshEnabled || document.hidden) return;
   autoRefreshTimer = setInterval(() => {
     refreshLiveData({ redrawAgents: true });
+  if (!autoRefreshEnabled) return;
+  autoRefreshTimer = setInterval(async () => {
+    await loadLiveData();
+    renderDashboard();
+    if (document.getElementById('view-agents').classList.contains('active')) renderAgentControl();
+    stampRefreshedNow();
   }, 30000);
 }
 
@@ -1122,6 +1128,9 @@ async function triggerQA(id) {
 
 async function refreshDash() {
   await refreshLiveData({ redrawAgents: false });
+  await loadLiveData();
+  renderDashboard();
+  stampRefreshedNow();
   showToast(apiConnected ? '✓ Dashboard refreshed from API' : 'Dashboard refreshed (seed mode)');
 }
 
@@ -1245,6 +1254,9 @@ function switchAgentTab(tab, btn) {
 
 async function refreshAgents() {
   await refreshLiveData({ redrawAgents: true });
+  await loadLiveData();
+  renderAgentControl();
+  stampRefreshedNow();
   showToast(apiConnected ? '✓ Agent panel refreshed from API' : 'Agent panel refreshed (seed mode)');
 }
 
@@ -1581,6 +1593,9 @@ document.addEventListener('visibilitychange', () => {
 (async function init() {
   renderDashboard();             // show seed data instantly
   await refreshLiveData({ redrawAgents: true });
+  await loadLiveData();          // upgrade with live API data
+  renderDashboard();             // re-render with live data
+  stampRefreshedNow();
   startAutoRefresh();
 })();
 </script>
