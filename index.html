@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CompliCore StayOps — Platform Demo</title>
+  <title>CompliCore StayOps</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -285,7 +285,7 @@
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px">
       <div>
         <div class="page-title">Dashboard</div>
-        <div class="page-subtitle" id="dash-subtitle"><span style="color:#4ade80">2 agents running</span> · Today: 23 workflows completed</div>
+        <div class="page-subtitle" id="dash-subtitle"><span style="color:#4ade80">2 agents running</span> · Today: 17 workflows completed</div>
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn-ghost" onclick="refreshDash()">
@@ -798,10 +798,10 @@ function updateConnectionStatus() {
     if (label) label.textContent = running + ' agents running · API connected';
   } else {
     if (dot) dot.style.background = '#f59e0b';
-    if (label) label.textContent = running + ' agents running · seed mode';
+    if (label) label.textContent = running + ' agents running · demo mode';
   }
   if (sync) {
-    const mode = apiConnected ? 'live data' : 'seed mode';
+    const mode = apiConnected ? 'live data' : 'demo data';
     const stamp = lastRefreshAt ? `last sync ${lastRefreshAt.toLocaleTimeString()}` : 'waiting for sync';
     sync.textContent = `46 skills · 28 workflows · ${mode} · ${stamp}`;
   }
@@ -988,6 +988,12 @@ function showView(name, navEl) {
 // ── DASHBOARD ────────────────────────────────────────────────────────────────
 
 function renderDashboard() {
+  const running = AGENTS.filter(a => a.status === 'running').length;
+  const totalDone = AGENTS.reduce((sum, a) => sum + a.done, 0);
+  const subtitle = document.getElementById('dash-subtitle');
+  if (subtitle) {
+    subtitle.innerHTML = `<span style="color:#4ade80">${running} agent${running !== 1 ? 's' : ''} running</span> · Today: ${totalDone} workflows completed`;
+  }
   renderDashAgents();
   renderDashApprovals();
   renderDashQuickActions();
@@ -1110,7 +1116,7 @@ async function refreshDash() {
   await loadLiveData();
   renderDashboard();
   stampRefreshedNow();
-  showToast(apiConnected ? '✓ Dashboard refreshed from API' : 'Dashboard refreshed (seed mode)');
+  showToast(apiConnected ? '✓ Dashboard refreshed from API' : 'Dashboard refreshed (demo data)');
 }
 
 // ── AGENT CONTROL ─────────────────────────────────────────────────────────────
@@ -1373,7 +1379,7 @@ function flushAudit() {
   const el = document.getElementById('audit-log');
   el.innerHTML = auditEntries.map(e => `
     <div class="audit-entry">
-      <span class="audit-ts">[2026-03-19T${e.ts}Z]</span>
+      <span class="audit-ts">[${new Date().toISOString().slice(0,10)}T${e.ts}Z]</span>
       <span class="audit-action"> ACTION: ${e.action.toUpperCase()}</span><br>
       <span class="audit-field">  AGENT:</span> <span class="audit-agent">${e.agent}</span>
       <span class="audit-field"> | TRIGGERED_BY:</span> <span class="audit-value">workflow_scheduler</span><br>
