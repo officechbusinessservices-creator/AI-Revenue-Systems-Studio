@@ -470,7 +470,7 @@ async def run_skill(body: SkillRunPayload):
         return {
             "plugin": body.plugin,
             "skill":  body.skill,
-            "status": "ok" if not result.startswith("[seed mode]") else "seed_mode",
+            "status": "ok" if not result.startswith("[demo mode]") else "demo_mode",
             "result": result,
         }
     except Exception as exc:

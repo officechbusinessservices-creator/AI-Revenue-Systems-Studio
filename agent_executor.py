@@ -198,7 +198,7 @@ async def execute_workflow(
     """
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
-        return f"[seed mode] {workflow} dispatched — set ANTHROPIC_API_KEY for live AI output."
+        return f"[demo mode] {workflow} dispatched — set ANTHROPIC_API_KEY for live AI output."
 
     agent = AGENT_PERSONAS.get(role)
     if not agent:
@@ -329,7 +329,7 @@ async def run_skill_direct(
     """
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
-        return f"[seed mode] Skill '{skill}' called — set ANTHROPIC_API_KEY for live output."
+        return f"[demo mode] Skill '{skill}' called — set ANTHROPIC_API_KEY for live output."
 
     agent = AGENT_PERSONAS.get(role, AGENT_PERSONAS["ceo"])
 

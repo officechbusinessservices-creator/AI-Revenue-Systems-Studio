@@ -38,8 +38,8 @@ CompliCore is a short-term rental operations platform where AI agents run your b
 ### 1. Clone and configure
 
 ```bash
-git clone https://github.com/your-org/complicore.git
-cd complicore
+git clone https://github.com/officechbusinessservices-creator/AI-Revenue-Systems-Studio.git
+cd AI-Revenue-Systems-Studio
 cp .env.local.example .env.local
 ```
 
@@ -158,7 +158,7 @@ The agents are more powerful when connected to real data. Add these environment 
 ```bash
 ANTHROPIC_API_KEY=sk-ant-...     # Enables live AI generation for all 46 skills
 GITHUB_TOKEN=ghp_...             # CTO: changelog, bug triage, uptime
-GITHUB_REPO=your-org/complicore  # CTO: which repo to monitor
+GITHUB_REPO=officechbusinessservices-creator/AI-Revenue-Systems-Studio  # CTO: which repo to monitor
 ```
 
 ### MCP Connectors (Settings → Integrations in claude.ai)
