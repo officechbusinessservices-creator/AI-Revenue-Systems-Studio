@@ -2,6 +2,8 @@
 
 # CompliCore
 
+[![Python Package using Conda](https://github.com/officechbusinessservices-creator/AI-Revenue-Systems-Studio/actions/workflows/python-package-conda.yml/badge.svg)](https://github.com/officechbusinessservices-creator/AI-Revenue-Systems-Studio/actions/workflows/python-package-conda.yml)
+
 **Maximum revenue. Zero compliance headaches. Six autonomous AI agents.**
 
 CompliCore is a short-term rental operations platform where AI agents run your business operations — invoicing, onboarding, content marketing, pipeline management, engineering workflows, and strategic intelligence — continuously, on schedule, without requiring you to remember.
