@@ -716,6 +716,7 @@ let apiConnected = false;
 let autoRefreshEnabled = true;
 let autoRefreshTimer = null;
 let lastRefreshAt = null;
+let isRefreshing = false;
 
 async function api(path, opts = {}) {
   try {
@@ -737,6 +738,22 @@ const AGENT_COLORS = {
   cro: { color: '#f87171', bg: 'rgba(248,113,113,.1)', border: 'rgba(248,113,113,.2)' },
   ceo: { color: '#a78bfa', bg: 'rgba(167,139,250,.1)', border: 'rgba(167,139,250,.2)' },
 };
+
+async function refreshLiveData({ redrawAgents = true } = {}) {
+  if (isRefreshing) return false;
+  isRefreshing = true;
+  try {
+    await loadLiveData();
+    renderDashboard();
+    if (redrawAgents && document.getElementById('view-agents').classList.contains('active')) {
+      renderAgentControl();
+    }
+    stampRefreshedNow();
+    return true;
+  } finally {
+    isRefreshing = false;
+  }
+}
 
 async function loadLiveData() {
   apiConnected = false;
@@ -816,6 +833,9 @@ function stampRefreshedNow() {
 
 function startAutoRefresh() {
   if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+  if (!autoRefreshEnabled || document.hidden) return;
+  autoRefreshTimer = setInterval(() => {
+    refreshLiveData({ redrawAgents: true });
   if (!autoRefreshEnabled) return;
   autoRefreshTimer = setInterval(async () => {
     await loadLiveData();
@@ -1107,6 +1127,7 @@ async function triggerQA(id) {
 }
 
 async function refreshDash() {
+  await refreshLiveData({ redrawAgents: false });
   await loadLiveData();
   renderDashboard();
   stampRefreshedNow();
@@ -1232,6 +1253,7 @@ function switchAgentTab(tab, btn) {
 }
 
 async function refreshAgents() {
+  await refreshLiveData({ redrawAgents: true });
   await loadLiveData();
   renderAgentControl();
   stampRefreshedNow();
@@ -1556,8 +1578,21 @@ function showToast(msg) {
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
 
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+    return;
+  }
+  if (autoRefreshEnabled) {
+    refreshLiveData({ redrawAgents: true });
+    startAutoRefresh();
+  }
+});
+
 (async function init() {
   renderDashboard();             // show seed data instantly
+  await refreshLiveData({ redrawAgents: true });
   await loadLiveData();          // upgrade with live API data
   renderDashboard();             // re-render with live data
   stampRefreshedNow();
